@@ -8,18 +8,22 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# --- Configuration Email ---
-# En local, il utilisera vos identifiants fournis. 
-# Sur Render, il cherchera les variables MAIL_USER et MAIL_PASS.
+# --- Configuration Email (Optimisée pour Render) ---
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
+
+# Récupération sécurisée et nettoyage du mot de passe
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USER', 'tsourakotoson0@gmail.com')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASS', 'tvts gvaq urbm ueht') 
+raw_password = os.environ.get('MAIL_PASS', 'tvts gvaq urbm ueht')
+# On retire les espaces pour éviter les erreurs d'authentification
+app.config['MAIL_PASSWORD'] = raw_password.replace(" ", "")
+
 mail = Mail(app)
 
-# Email de l'admin
-ADMIN_EMAIL = os.environ.get('MAIL_USER', 'tsourakotoson0@gmail.com')
+# Email de l'administrateur
+ADMIN_EMAIL = app.config['MAIL_USERNAME']
 
 # --- Configuration Google Sheets ---
 def get_google_sheet():
@@ -34,7 +38,11 @@ def get_google_sheet():
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     else:
         # Configuration pour LOCAL (utilise le fichier credentials.json)
-        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+        try:
+            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+        except Exception:
+            # Fallback si le fichier est manquant en local
+            return None
         
     client = gspread.authorize(creds)
     return client.open("suivi_reservation_lalilalou").sheet1
@@ -44,6 +52,8 @@ def get_slots():
     try:
         target_date = request.args.get('date')
         sheet = get_google_sheet()
+        if not sheet: return jsonify([]), 500
+        
         all_records = sheet.get_all_values()
         booked_slots = []
         for row in all_records:
@@ -66,8 +76,9 @@ def book():
     try:
         data = request.json
         sheet = get_google_sheet()
+        if not sheet: raise Exception("Impossible d'accéder au Sheet")
         
-        # 1. Enregistrement (Action rapide)
+        # 1. Enregistrement (Action prioritaire)
         new_row = [
             datetime.now().strftime("%d/%m/%Y %H:%M:%S"), 
             data['fullname'], data['email'], data['phone'],
@@ -79,7 +90,7 @@ def book():
 
         payment_method_label = "Paiement sur place" if data['payment_method'] == "sur_place" else "Mobile Money (Mvola)"
 
-        # 2. Préparation des messages
+        # 2. Préparation du message Client
         client_msg = Message(
             subject=f"Accusé de réception : Votre demande chez Lalilalou 🌸",
             sender=("Lalilalou Beauty & Spa", app.config['MAIL_USERNAME']),
@@ -115,6 +126,8 @@ L'équipe Lalilalou
 Service Clientèle
 Contact : +261 34 64 165 66
 """
+
+        # 3. Préparation du message Admin
         admin_msg = Message(
             subject=f"🚨 NOUVELLE DEMANDE : {data['fullname']}",
             sender=("Système Lalilalou", app.config['MAIL_USERNAME']),
@@ -139,7 +152,8 @@ Lien vers le suivi Google Sheets : https://docs.google.com/spreadsheets/d/1qMl7O
 
 Action requise : Contacter le client pour valider le rendez-vous.
 """
-        # 3. ENVOI GROUPÉ (Beaucoup plus rapide)
+
+        # 4. ENVOI GROUPÉ (Optimisé)
         with mail.connect() as conn:
             conn.send(client_msg)
             conn.send(admin_msg)
@@ -147,10 +161,9 @@ Action requise : Contacter le client pour valider le rendez-vous.
         return jsonify({"status": "success"}), 200
 
     except Exception as e:
-        print(f"Erreur: {e}")
+        print(f"Erreur lors de la réservation: {e}")
         return jsonify({"status": "error", "message": "Une erreur technique est survenue"}), 500
     
 if __name__ == '__main__':
-    # Configuration pour le port de Render
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)

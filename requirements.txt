@@ -3,3 +3,4 @@ flask-mail
 gspread 
 oauth2client
 gunicorn
+python-dotenv

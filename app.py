@@ -1,51 +1,83 @@
 import os
 import json
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 from flask_mail import Mail, Message
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
+from dotenv import load_dotenv
+
+# Charger le fichier .env
+load_dotenv()
 
 app = Flask(__name__)
 
-# --- Configuration Email (Optimisée pour Render) ---
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 465
-app.config['MAIL_USE_TLS'] = False
-app.config['MAIL_USE_SSL'] = True
+# ─────────────────────────────────────────────
+# Configuration EMAIL (SSL Port 465)
+# ─────────────────────────────────────────────
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 465))
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL') == 'True'
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS') == 'True'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USER')
 
-# Récupération sécurisée et nettoyage du mot de passe
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USER', 'tsourakotoson0@gmail.com')
-raw_password = os.environ.get('MAIL_PASS', 'tvts gvaq urbm ueht')
-# On retire les espaces pour éviter les erreurs d'authentification
-app.config['MAIL_PASSWORD'] = raw_password.replace(" ", "")
+# Nettoyage automatique du mot de passe
+raw_pass = os.environ.get('MAIL_PASS', '')
+app.config['MAIL_PASSWORD'] = raw_pass.replace(" ", "")
+
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
 
 mail = Mail(app)
-
-# Email de l'administrateur
 ADMIN_EMAIL = app.config['MAIL_USERNAME']
 
-# --- Configuration Google Sheets ---
+# ─────────────────────────────────────────────
+# Google Sheets (Priorité à la Variable d'ENV)
+# ─────────────────────────────────────────────
 def get_google_sheet():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # Détection de l'environnement
-    google_creds_json = os.environ.get("GOOGLE_CREDS")
-    
-    if google_creds_json:
-        # Configuration pour RENDER
-        creds_dict = json.loads(google_creds_json)
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    # On récupère la variable GOOGLE_CREDS
+    creds_json = os.environ.get("GOOGLE_CREDS")
+
+    if creds_json:
+        try:
+            # Nettoyage au cas où la variable est entourée de guillemets simples dans le .env
+            if creds_json.startswith("'") and creds_json.endswith("'"):
+                creds_json = creds_json[1:-1]
+            
+            creds_dict = json.loads(creds_json)
+            
+            # Correction cruciale pour la clé privée
+            if 'private_key' in creds_dict:
+                creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
+            
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+            print("INFO: Connexion Google Sheets via ENV réussie.")
+        except Exception as e:
+            print(f"ERREUR: Problème avec GOOGLE_CREDS dans l'ENV : {e}")
+            return None
     else:
-        # Configuration pour LOCAL (utilise le fichier credentials.json)
+        # Fallback local (pourra être supprimé plus tard)
         try:
             creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-        except Exception:
-            # Fallback si le fichier est manquant en local
+            print("INFO: Connexion Google Sheets via credentials.json réussie.")
+        except Exception as e:
+            print(f"ERREUR: Aucun identifiant Google trouvé (ENV ou fichier) : {e}")
             return None
-        
-    client = gspread.authorize(creds)
-    return client.open("suivi_reservation_lalilalou").sheet1
+
+    try:
+        client = gspread.authorize(creds)
+        return client.open("suivi_reservation_lalilalou").sheet1
+    except Exception as e:
+        print(f"ERREUR d'autorisation Google Sheets : {e}")
+        return None
+
+# ─────────────────────────────────────────────
+# Routes
+# ─────────────────────────────────────────────
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/api/get-slots', methods=['GET'])
 def get_slots():
@@ -54,31 +86,24 @@ def get_slots():
         sheet = get_google_sheet()
         if not sheet: return jsonify([]), 500
         
-        all_records = sheet.get_all_values()
+        all_rows = sheet.get_all_values()
         booked_slots = []
-        for row in all_records:
-            if len(row) > 8:
-                row_date = row[7]
-                row_time = row[8]
-                if row_date == target_date:
-                    booked_slots.append(row_time)
+        for row in all_rows:
+            if len(row) > 8 and row[7] == target_date:
+                booked_slots.append(row[8])
         return jsonify(booked_slots)
     except Exception as e:
-        print(f"Erreur lors de la récupération des créneaux: {e}")
+        print(f"Erreur get-slots: {e}")
         return jsonify([]), 500
-    
-@app.route('/')
-def index():
-    return render_template('index.html')
 
 @app.route('/api/book', methods=['POST'])
 def book():
     try:
         data = request.json
         sheet = get_google_sheet()
-        if not sheet: raise Exception("Impossible d'accéder au Sheet")
-        
-        # 1. Enregistrement (Action prioritaire)
+        if not sheet: raise Exception("Sheet inaccessible")
+
+        # 1. Enregistrement
         new_row = [
             datetime.now().strftime("%d/%m/%Y %H:%M:%S"), 
             data['fullname'], data['email'], data['phone'],
@@ -88,72 +113,23 @@ def book():
         ]
         sheet.append_row(new_row)
 
-        payment_method_label = "Paiement sur place" if data['payment_method'] == "sur_place" else "Mobile Money (Mvola)"
+        payment_label = "Paiement sur place" if data['payment_method'] == "sur_place" else "Mobile Money (Mvola)"
 
-        # 2. Préparation du message Client
+        # 2. Préparation Mail Client
         client_msg = Message(
             subject=f"Accusé de réception : Votre demande chez Lalilalou 🌸",
-            sender=("Lalilalou Beauty & Spa", app.config['MAIL_USERNAME']),
             recipients=[data['email']]
         )
-        client_msg.body = f"""
-Bonjour {data['fullname']},
+        client_msg.body = f"Bonjour {data['fullname']},\n\nNous avons bien reçu votre demande pour {data['service']} le {data['date']} à {data['time']}.\nVotre réservation est actuellement EN ATTENTE DE VALIDATION.\n\nCordialement,\nL'équipe Lalilalou"
 
-Nous vous remercions d'avoir choisi Lalilalou pour votre prochain moment de bien-être.
-
-Votre demande de réservation a bien été enregistrée et est actuellement en cours d'examen par notre équipe. 
-
-RECAPITULATIF DE VOTRE DEMANDE :
--------------------------------------------
-✨ Service : {data['service']}
-📅 Date : {data['date']}
-🕙 Heure : {data['time']}
-👤 Praticien : {data['employee']}
-💰 Montant estimé : {data['price']}€
-💳 Mode de règlement : {payment_method_label}
--------------------------------------------
-
-PROCHAINE ÉTAPE :
-Notre équipe vérifie nos disponibilités de dernière minute. Vous recevrez un e-mail de confirmation définitive ou un appel de notre part dans les plus brefs délais.
-
-{"⚠️ INFO PAIEMENT MVOLA : Pour garantir votre créneau, merci d'effectuer le transfert au +261 34 64 165 66. Votre réservation sera validée dès réception." if data['payment_method'] == 'mvola' else ""}
-
-Nous avons hâte de vous recevoir pour vous offrir une expérience d'exception.
-
-Cordialement,
-
-L'équipe Lalilalou
-Service Clientèle
-Contact : +261 34 64 165 66
-"""
-
-        # 3. Préparation du message Admin
+        # 3. Préparation Mail Admin
         admin_msg = Message(
-            subject=f"🚨 NOUVELLE DEMANDE : {data['fullname']}",
-            sender=("Système Lalilalou", app.config['MAIL_USERNAME']),
+            subject=f"🚨 NOUVELLE RÉSERVATION : {data['fullname']}",
             recipients=[ADMIN_EMAIL]
         )
-        admin_msg.body = f"""
-Une nouvelle demande de réservation vient d'arriver via le site internet.
+        admin_msg.body = f"Nouvelle demande :\nClient: {data['fullname']}\nTel: {data['phone']}\nService: {data['service']}\nDate: {data['date']} à {data['time']}\nPaiement: {payment_label}"
 
-DÉTAILS DU CLIENT :
-- Nom : {data['fullname']}
-- Téléphone : {data['phone']}
-- Email : {data['email']}
-
-DÉTAILS DU RENDEZ-VOUS :
-- Service : {data['service']} ({data['category']})
-- Créneau : le {data['date']} à {data['time']}
-- Praticien : {data['employee']}
-- Prix : {data['price']}€
-- Paiement : {payment_method_label}
-
-Lien vers le suivi Google Sheets : https://docs.google.com/spreadsheets/d/1qMl7OXvUzOzHoHCN5rYTmpC1az081a6sx_R-NGEErBI/edit?gid=0#gid=0
-
-Action requise : Contacter le client pour valider le rendez-vous.
-"""
-
-        # 4. ENVOI GROUPÉ (Optimisé)
+        # 4. Envoi
         with mail.connect() as conn:
             conn.send(client_msg)
             conn.send(admin_msg)
@@ -161,9 +137,9 @@ Action requise : Contacter le client pour valider le rendez-vous.
         return jsonify({"status": "success"}), 200
 
     except Exception as e:
-        print(f"Erreur lors de la réservation: {e}")
-        return jsonify({"status": "error", "message": "Une erreur technique est survenue"}), 500
-    
+        print(f"Erreur réservation: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)

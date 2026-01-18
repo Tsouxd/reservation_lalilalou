@@ -67,7 +67,7 @@ def book():
         data = request.json
         sheet = get_google_sheet()
         
-        # 1. Enregistrement
+        # 1. Enregistrement (Action rapide)
         new_row = [
             datetime.now().strftime("%d/%m/%Y %H:%M:%S"), 
             data['fullname'], data['email'], data['phone'],
@@ -79,13 +79,12 @@ def book():
 
         payment_method_label = "Paiement sur place" if data['payment_method'] == "sur_place" else "Mobile Money (Mvola)"
 
-        # 2. EMAIL CLIENT : Professionnel et rassurant
+        # 2. Préparation des messages
         client_msg = Message(
             subject=f"Accusé de réception : Votre demande chez Lalilalou 🌸",
             sender=("Lalilalou Beauty & Spa", app.config['MAIL_USERNAME']),
             recipients=[data['email']]
         )
-        
         client_msg.body = f"""
 Bonjour {data['fullname']},
 
@@ -116,11 +115,8 @@ L'équipe Lalilalou
 Service Clientèle
 Contact : +261 34 64 165 66
 """
-        mail.send(client_msg)
-
-        # 3. EMAIL ADMIN : Efficace et direct
         admin_msg = Message(
-            subject=f"🚨 NOUVELLE DEMANDE : {data['fullname']} - {data['service']}",
+            subject=f"🚨 NOUVELLE DEMANDE : {data['fullname']}",
             sender=("Système Lalilalou", app.config['MAIL_USERNAME']),
             recipients=[ADMIN_EMAIL]
         )
@@ -143,7 +139,10 @@ Lien vers le suivi Google Sheets : https://docs.google.com/spreadsheets/d/1qMl7O
 
 Action requise : Contacter le client pour valider le rendez-vous.
 """
-        mail.send(admin_msg)
+        # 3. ENVOI GROUPÉ (Beaucoup plus rapide)
+        with mail.connect() as conn:
+            conn.send(client_msg)
+            conn.send(admin_msg)
 
         return jsonify({"status": "success"}), 200
 

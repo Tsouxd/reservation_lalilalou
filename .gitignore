@@ -4,3 +4,4 @@ credentials.json
 # Environnements virtuels
 venv/
 .env
+generer_token.py

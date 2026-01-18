@@ -1,6 +1,5 @@
-flask 
-flask-mail 
-gspread 
+Flask
+gspread
 oauth2client
 gunicorn
 python-dotenv

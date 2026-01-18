@@ -1,0 +1,6 @@
+# Secrets
+credentials.json
+
+# Environnements virtuels
+venv/
+.env

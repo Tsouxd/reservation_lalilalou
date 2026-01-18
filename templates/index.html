@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réservation en ligne - Lalilalou</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ea66be 0%, #ffffff 100%);
+            padding: 20px;
+            min-height: 100vh;
+            animation: gradientShift 15s ease infinite;
+            background-size: 200% 200%;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: containerFadeIn 0.6s ease;
+        }
+
+        @keyframes containerFadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px) scale(0.95);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #000000 0%, #434343 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            border-bottom: 3px solid #ff69b4;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,105,180,0.1) 0%, transparent 70%);
+            animation: headerPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes headerPulse {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(180deg); }
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+            animation: titleSlideIn 0.8s ease;
+        }
+
+        @keyframes titleSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.8;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+            animation: subtitleSlideIn 0.8s ease 0.2s both;
+        }
+
+        @keyframes subtitleSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 0.8;
+                transform: translateX(0);
+            }
+        }
+
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 30px 50px;
+            background: #fafafa;
+            position: relative;
+        }
+
+        .progress-bar::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50px;
+            right: 50px;
+            height: 2px;
+            background: #e0e0e0;
+            transform: translateY(-50%);
+            z-index: 0;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 50%;
+            left: 50px;
+            height: 2px;
+            background: linear-gradient(90deg, #ff69b4, #ff1493);
+            transform: translateY(-50%);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+            box-shadow: 0 0 10px rgba(255,105,180,0.5);
+        }
+
+        .step {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            animation: stepFadeIn 0.5s ease both;
+        }
+
+        .step:nth-child(2) { animation-delay: 0.1s; }
+        .step:nth-child(3) { animation-delay: 0.2s; }
+        .step:nth-child(4) { animation-delay: 0.3s; }
+
+        @keyframes stepFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .step-circle {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 2px solid #e0e0e0;
+            color: #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .step.active .step-circle {
+            background: #ff69b4;
+            color: white;
+            border-color: #ff69b4;
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(255,105,180,0.6);
+            animation: circlePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes circlePulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(255,105,180,0.6); }
+            50% { box-shadow: 0 0 30px rgba(255,105,180,0.9); }
+        }
+
+        .step.completed .step-circle {
+            background: #000000;
+            color: white;
+            border-color: #000000;
+            animation: checkmarkPop 0.5s ease;
+        }
+
+        @keyframes checkmarkPop {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        .step-label {
+            font-size: 13px;
+            color: #666;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: color 0.3s ease;
+        }
+
+        .step.active .step-label {
+            color: #ff69b4;
+            font-weight: 600;
+        }
+
+        .form-content {
+            padding: 50px 40px;
+            background: #ffffff;
+        }
+
+        .form-step {
+            display: none;
+        }
+
+        .form-step.active {
+            display: block;
+            animation: slideInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideInUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0);
+            }
+        }
+
+        .form-step h2 {
+            margin-bottom: 35px;
+            color: #000000;
+            font-size: 24px;
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            animation: titleBounce 0.6s ease;
+        }
+
+        @keyframes titleBounce {
+            0% { transform: scale(0.9); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            animation: formGroupSlide 0.5s ease both;
+        }
+
+        .form-group:nth-child(2) { animation-delay: 0.1s; }
+        .form-group:nth-child(3) { animation-delay: 0.2s; }
+        .form-group:nth-child(4) { animation-delay: 0.3s; }
+
+        @keyframes formGroupSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 400;
+            color: #000000;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 15px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            background: #ffffff;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #ff69b4;
+            box-shadow: 0 0 0 3px rgba(255,105,180,0.1);
+            transform: translateY(-2px);
+        }
+
+        select:hover, input:hover {
+            border-color: #ff69b4;
+        }
+
+        .time-slots {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .time-slot {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: white;
+            font-weight: 400;
+            font-size: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .time-slot::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,105,180,0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+
+        .time-slot:hover {
+            border-color: #ff69b4;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(255,105,180,0.3);
+        }
+
+        .time-slot:hover::before {
+            width: 200%;
+            height: 200%;
+        }
+
+        .time-slot.selected {
+            background: linear-gradient(135deg, #ff69b4, #ff1493);
+            color: white;
+            border-color: #ff69b4;
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(255,105,180,0.4);
+            animation: slotSelect 0.4s ease;
+        }
+
+        @keyframes slotSelect {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1.05); }
+        }
+
+        .time-slot.booked {
+            background-color: #e9ecef;
+            color: #adb5bd;
+            cursor: not-allowed;
+            border: 2px solid #dee2e6;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .time-slot.booked::after {
+            content: " (Complet)";
+            font-size: 10px;
+            display: block;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+            animation: buttonSlideIn 0.6s ease 0.4s both;
+        }
+
+        @keyframes buttonSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        button {
+            flex: 1;
+            padding: 16px 35px;
+            border: none;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        button:hover::before {
+            width: 300%;
+            height: 300%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff69b4, #ff1493);
+            color: white;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 15px rgba(255,105,180,0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255,105,180,0.5);
+        }
+
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            border-color: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #000000;
+            color: white;
+            border: 2px solid #000000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary:hover {
+            background: #333333;
+            border-color: #333333;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #fafafa, #f0f0f0);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border-left: 4px solid #ff69b4;
+            animation: summaryFadeIn 0.6s ease;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        @keyframes summaryFadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+            animation: summaryItemSlide 0.5s ease both;
+        }
+
+        .summary-item:nth-child(1) { animation-delay: 0.1s; }
+        .summary-item:nth-child(2) { animation-delay: 0.2s; }
+        .summary-item:nth-child(3) { animation-delay: 0.3s; }
+        .summary-item:nth-child(4) { animation-delay: 0.4s; }
+        .summary-item:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes summaryItemSlide {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+            font-weight: 600;
+            font-size: 20px;
+            color: #ff69b4;
+            margin-top: 10px;
+        }
+
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 50px 40px;
+        }
+
+        .success-message.active {
+            display: block;
+            animation: successPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes successPop {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .success-icon {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #ffc107, #ff9800);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            color: white;
+            font-size: 45px;
+            animation: iconBounce 0.8s ease 0.2s both;
+            box-shadow: 0 10px 30px rgba(255,193,7,0.4);
+        }
+
+        @keyframes iconBounce {
+            0% { transform: scale(0) rotate(-180deg); }
+            50% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .success-message h2 {
+            color: #856404;
+            margin-bottom: 20px;
+            font-size: 26px;
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: successTitleSlide 0.6s ease 0.4s both;
+        }
+
+        @keyframes successTitleSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success-message p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            font-size: 15px;
+            animation: successTextFade 0.6s ease 0.6s both;
+        }
+
+        @keyframes successTextFade {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .payment-methods {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .payment-option {
+            border: 2px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .payment-option:hover {
+            background-color: #fff5f9;
+            border-color: #ff69b4;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(255,105,180,0.2);
+        }
+
+        .payment-option input {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        #mvolaDetails {
+            display: none;
+            background: linear-gradient(135deg, #fff3cd, #ffe5a8);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 0.9em;
+            border-left: 4px solid #ffc107;
+            animation: mvolaSlide 0.4s ease;
+            box-shadow: 0 3px 10px rgba(255,193,7,0.2);
+        }
+
+        @keyframes mvolaSlide {
+            from {
+                opacity: 0;
+                max-height: 0;
+                padding: 0 15px;
+            }
+            to {
+                opacity: 1;
+                max-height: 100px;
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .time-slots {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .progress-bar {
+                padding: 20px 30px;
+            }
+            
+            .progress-bar::before {
+                left: 30px;
+                right: 30px;
+            }
+            
+            .progress-line {
+                left: 30px;
+            }
+
+            .form-content {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+
+        /* Effet de particules flottantes */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* Effet de brillance sur les boutons */
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+    
+        .time-slot.booked {
+            background-color: #f1f1f1 !important;
+            color: #bbbbbb !important;
+            cursor: not-allowed !important;
+            border: 1px solid #ddd !important;
+            pointer-events: none; /* Désactive le clic */
+            position: relative;
+        }
+
+        .time-slot.booked::after {
+            content: "Complet";
+            font-size: 9px;
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .loading-text {
+            color: #666;
+            font-style: italic;
+            padding: 10px;
+            text-align: center;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Réservation en ligne</h1>
+            <p>Réservez votre service en quelques clics</p>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-line" id="progressLine"></div>
+            <div class="step active" data-step="1">
+                <div class="step-circle">1</div>
+                <div class="step-label">Service</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Créneaux</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-circle">3</div>
+                <div class="step-label">Paiement</div>
+            </div>
+        </div>
+
+        <div class="form-content">
+            <!-- Étape 1: Sélection du service -->
+            <div class="form-step active" id="step1">
+                <h2>Choisissez votre service</h2>
+                
+                <div class="form-group">
+                    <label for="category">Catégorie</label>
+                    <select id="category" required>
+                        <option value="">Sélectionnez une catégorie</option>
+                        <option value="coiffure">Coiffure</option>
+                        <option value="esthetique">Esthétique</option>
+                        <option value="massage">Massage & Spa</option>
+                        <option value="manucure">Manucure & Pédicure</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="service">Service</label>
+                    <select id="service" required>
+                        <option value="">Sélectionnez un service</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="employee">Employé (optionnel)</label>
+                    <select id="employee">
+                        <option value="">Pas de préférence</option>
+                        <option value="marie">Marie Dubois</option>
+                        <option value="sophie">Sophie Martin</option>
+                        <option value="julien">Julien Bernard</option>
+                        <option value="lucas">Lucas Petit</option>
+                    </select>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn-primary" onclick="nextStep()">Suivant</button>
+                </div>
+            </div>
+
+            <!-- Étape 2: Sélection du créneau -->
+            <div class="form-step" id="step2">
+                <h2>Choisissez votre créneau</h2>
+                
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <input type="date" id="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Heure disponible</label>
+                    <div class="time-slots" id="timeSlots"></div>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="prevStep()">Retour</button>
+                    <button type="button" class="btn-primary" onclick="nextStep()">Suivant</button>
+                </div>
+            </div>
+
+            <!-- Étape 3: Paiement et confirmation -->
+            <div class="form-step" id="step3">
+                <h2>Confirmation et paiement</h2>
+                
+                <div class="summary">
+                    <div class="summary-item">
+                        <span>Service:</span>
+                        <span id="summaryService">-</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Date:</span>
+                        <span id="summaryDate">-</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Heure:</span>
+                        <span id="summaryTime">-</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Employé:</span>
+                        <span id="summaryEmployee">-</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Total:</span>
+                        <span id="summaryPrice">50€</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Mode de paiement *</label>
+                    <div class="payment-methods">
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="sur_place" checked onchange="toggleMvola(false)"> Payer sur place
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="mvola" onchange="toggleMvola(true)"> Mvola
+                        </label>
+                    </div>
+                    <div id="mvolaDetails">
+                        📞 Faire le dépôt au : <strong>+261 34 64 165 66</strong>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="fullname">Nom complet *</label>
+                    <input type="text" id="fullname" placeholder="Jean Dupont" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">E-mail *</label>
+                    <input type="email" id="email" placeholder="jean.dupont@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Numéro de téléphone *</label>
+                    <input type="tel" id="phone" placeholder="+33 6 12 34 56 78" required>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="prevStep()">Retour</button>
+                    <button type="button" class="btn-primary" onclick="submitBooking()">Confirmer et payer</button>
+                </div>
+            </div>
+
+            <!-- Message de succès -->
+            <div class="success-message" id="successMessage">
+                <div class="success-icon">✓</div>
+                <h2>Demande envoyée !</h2>
+                <p>
+                    Votre demande de réservation a été enregistrée. 
+                    Un e-mail récapitulatif a été envoyé à <strong id="confirmEmail"></strong>. 
+                    <br><strong>Veuillez attendre la validation de notre équipe.</strong>
+                </p>
+                <button type="button" class="btn-primary" onclick="resetForm()">Retour à l'accueil</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let bookingData = {};
+
+        const services = {
+            coiffure: [
+                { name: 'Coupe femme', price: 45 },
+                { name: 'Coupe homme', price: 30 },
+                { name: 'Coloration', price: 75 },
+                { name: 'Brushing', price: 35 }
+            ],
+            esthetique: [
+                { name: 'Soin du visage', price: 60 },
+                { name: 'Épilation', price: 40 },
+                { name: 'Maquillage', price: 50 }
+            ],
+            massage: [
+                { name: 'Massage relaxant 60min', price: 80 },
+                { name: 'Massage sportif 45min', price: 65 },
+                { name: 'Massage dos 30min', price: 45 }
+            ],
+            manucure: [
+                { name: 'Manucure classique', price: 35 },
+                { name: 'Pose vernis semi-permanent', price: 45 },
+                { name: 'Pédicure', price: 40 }
+            ]
+        };
+
+        const timeSlots = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+
+        // Changement de catégorie -> met à jour les services
+        document.getElementById('category').addEventListener('change', function() {
+            const category = this.value;
+            const serviceSelect = document.getElementById('service');
+            serviceSelect.innerHTML = '<option value="">Sélectionnez un service</option>';
+            
+            if (category && services[category]) {
+                services[category].forEach((service, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${service.name} - ${service.price}€`;
+                    option.dataset.price = service.price;
+                    option.dataset.name = service.name;
+                    serviceSelect.appendChild(option);
+                });
+            }
+        });
+
+        // Sélection de date -> Charge les créneaux réels
+        document.getElementById('date').addEventListener('change', generateTimeSlots);
+
+        async function generateTimeSlots() {
+            const dateInput = document.getElementById('date').value;
+            const container = document.getElementById('timeSlots');
+            
+            if (!dateInput) return;
+
+            // Affiche le message de chargement immédiatement
+            container.innerHTML = '<div class="loading-text">Recherche des disponibilités...</div>';
+
+            try {
+                // Requête au backend Flask
+                const response = await fetch(`/api/get-slots?date=${dateInput}`);
+                if (!response.ok) throw new Error('Erreur serveur');
+                
+                const bookedTimes = await response.json();
+
+                // Vide le conteneur pour mettre les vrais créneaux
+                container.innerHTML = '';
+                
+                timeSlots.forEach(time => {
+                    const slot = document.createElement('div');
+                    const isBooked = bookedTimes.includes(time);
+                    
+                    slot.className = isBooked ? 'time-slot booked' : 'time-slot';
+                    slot.textContent = time;
+                    
+                    if (!isBooked) {
+                        slot.onclick = function() {
+                            document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+                            this.classList.add('selected');
+                            bookingData.time = time;
+                        };
+                    }
+                    container.appendChild(slot);
+                });
+
+                if (timeSlots.length === 0) {
+                    container.innerHTML = '<p>Aucun créneau disponible.</p>';
+                }
+
+            } catch (error) {
+                console.error("Erreur:", error);
+                container.innerHTML = '<p style="color:red; font-size:12px;">Impossible de charger les horaires. Vérifiez votre connexion.</p>';
+            }
+        }
+
+        function updateProgressBar() {
+            const steps = document.querySelectorAll('.step');
+            const progressLine = document.getElementById('progressLine');
+            const width = ((currentStep - 1) / (steps.length - 1)) * 100;
+            
+            steps.forEach((step, index) => {
+                if (index + 1 < currentStep) {
+                    step.classList.add('completed');
+                    step.classList.remove('active');
+                } else if (index + 1 === currentStep) {
+                    step.classList.add('active');
+                    step.classList.remove('completed');
+                } else {
+                    step.classList.remove('active', 'completed');
+                }
+            });
+            progressLine.style.width = `${width}%`;
+        }
+
+        function nextStep() {
+            if (currentStep === 1) {
+                const category = document.getElementById('category').value;
+                const serviceSelect = document.getElementById('service');
+                if (!category || !serviceSelect.value) {
+                    alert('Veuillez sélectionner un service');
+                    return;
+                }
+                const sel = serviceSelect.options[serviceSelect.selectedIndex];
+                bookingData.category = category;
+                bookingData.service = sel.dataset.name;
+                bookingData.price = sel.dataset.price;
+                bookingData.employee = document.getElementById('employee').options[document.getElementById('employee').selectedIndex].text;
+                
+                // Bloque les dates passées
+                document.getElementById('date').min = new Date().toISOString().split('T')[0];
+            }
+            
+            if (currentStep === 2) {
+                if (!document.getElementById('date').value || !bookingData.time) {
+                    alert('Veuillez choisir une date et une heure');
+                    return;
+                }
+                bookingData.date = document.getElementById('date').value;
+                updateSummary();
+            }
+            
+            if (currentStep < 3) {
+                document.getElementById(`step${currentStep}`).classList.remove('active');
+                currentStep++;
+                document.getElementById(`step${currentStep}`).classList.add('active');
+                updateProgressBar();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                document.getElementById(`step${currentStep}`).classList.remove('active');
+                currentStep--;
+                document.getElementById(`step${currentStep}`).classList.add('active');
+                updateProgressBar();
+            }
+        }
+
+        function updateSummary() {
+            document.getElementById('summaryService').textContent = bookingData.service;
+            document.getElementById('summaryDate').textContent = bookingData.date;
+            document.getElementById('summaryTime').textContent = bookingData.time;
+            document.getElementById('summaryEmployee').textContent = bookingData.employee;
+            document.getElementById('summaryPrice').textContent = bookingData.price + '€';
+        }
+
+        function toggleMvola(show) {
+            document.getElementById('mvolaDetails').style.display = show ? 'block' : 'none';
+        }
+
+        function submitBooking() {
+            const fullname = document.getElementById('fullname').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const payment = document.querySelector('input[name="payment"]:checked').value;
+            
+            if (!fullname || !email || !phone) {
+                alert('Veuillez remplir vos coordonnées');
+                return;
+            }
+            
+            bookingData.fullname = fullname;
+            bookingData.email = email;
+            bookingData.phone = phone;
+            bookingData.payment_method = payment;
+
+            const btn = document.querySelector('#step3 .btn-primary');
+            const originalText = btn.textContent;
+            btn.textContent = "Envoi en cours...";
+            btn.disabled = true;
+
+            fetch('/api/book', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(bookingData)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    document.getElementById('step3').classList.remove('active');
+                    document.getElementById('confirmEmail').textContent = email;
+                    document.getElementById('successMessage').classList.add('active');
+                } else {
+                    alert("Erreur: " + data.message);
+                }
+            })
+            .catch(err => alert("Erreur de connexion au serveur"))
+            .finally(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            });
+        }
+
+        function resetForm() {
+            location.reload(); // La méthode la plus propre pour tout remettre à zéro
+        }
+
+        updateProgressBar();
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 import os
 import json
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from flask import Flask, render_template, request, jsonify
 import gspread
@@ -10,6 +10,8 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from oauth2client.service_account import ServiceAccountCredentials
 from dotenv import load_dotenv
+import string
+import random
 
 load_dotenv()
 app = Flask(__name__)
@@ -58,9 +60,70 @@ def get_google_sheet():
         creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
     return gspread.authorize(creds).open("suivi_reservation_lalilalou").sheet1
 
+# --- LOGIQUE DE RAPPEL AUTOMATIQUE (Colonne M intégrée) ---
+def trigger_auto_reminders():
+    try:
+        sheet = get_google_sheet()
+        all_rows = sheet.get_all_values()
+        
+        # Date de demain au format YYYY-MM-DD (correspondant à votre format Sheet)
+        demain_str = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        envoyes = 0
+
+        # enumerate(all_rows) permet de suivre le numéro de ligne pour la mise à jour
+        # On commence à l'index 1 (deuxième ligne du sheet)
+        for i, row in enumerate(all_rows):
+            if i == 0: continue # Sauter l'en-tête
+
+            # Index 7: Date RDV | Index 11: Statut | Index 12: Rappel Envoyé (Colonne M)
+            if len(row) >= 12:
+                date_rdv = row[7]
+                statut = row[11]
+                # Si la colonne M n'existe pas encore sur la ligne, on considère "NON"
+                deja_envoye = row[12] if len(row) > 12 else "NON"
+
+                # Condition : C'est demain ET ce n'est pas annulé ET pas encore envoyé
+                if date_rdv == demain_str and "ANNULÉ" not in statut.upper() and deja_envoye != "OUI":
+                    client_nom = row[1]
+                    client_email = row[2]
+                    service_nom = row[5]
+                    heure_rdv = row[8]
+
+                    subject = f"Rappel : Votre moment bien-être demain chez Lalilalou 🌸"
+                    body = f"""Bonjour {client_nom},
+
+C'est un petit rappel pour votre rendez-vous de demain chez Lalilalou Beauty & Spa.
+
+DÉTAILS DU RENDEZ-VOUS :
+-------------------------------------------
+✨ Service : {service_nom}
+📅 Date : {date_rdv} (Demain)
+🕙 Heure : {heure_rdv}
+-------------------------------------------
+
+Nous avons hâte de vous recevoir ! En cas d'empêchement, merci de nous prévenir au plus tôt.
+
+Cordialement,
+L'équipe Lalilalou
+Contact : +261 34 64 165 66"""
+                    
+                    if send_gmail_api(client_email, subject, body):
+                        # Mise à jour de la colonne M (13ème colonne) pour cette ligne spécifique
+                        # i + 1 car l'index de liste commence à 0 et le sheet à 1
+                        sheet.update_cell(i + 1, 13, "OUI")
+                        envoyes += 1
+
+        if envoyes > 0:
+            print(f"INFO: {envoyes} rappel(s) envoyé(s) pour le {demain_str}")
+
+    except Exception as e:
+        print(f"Erreur Rappels Automatiques: {e}")
+
 # --- ROUTES ---
 @app.route('/')
 def index():
+    # Déclenché par UptimeRobot
+    trigger_auto_reminders()
     return render_template('index.html')
 
 @app.route('/api/get-slots', methods=['GET'])
@@ -79,80 +142,74 @@ def book():
         data = request.json
         sheet = get_google_sheet()
         
-        # 1. Enregistrement Sheet
+        # --- GÉNÉRATION DE LA RÉFÉRENCE UNIQUE ---
+        # Crée une chaine comme LL-A739B
+        chars = string.ascii_uppercase + string.digits
+        ref_code = "LL-" + ''.join(random.choices(chars, k=5))
+
+        # 1. Enregistrement Sheet (On ajoute la réf en 14ème colonne)
         new_row = [
             datetime.now().strftime("%d/%m/%Y %H:%M:%S"), 
             data['fullname'], data['email'], data['phone'],
             data['category'], data['service'], data['employee'],
-            data['date'], data['time'], f"{data['price']}€",
-            data['payment_method'], "EN ATTENTE"
+            data['date'], data['time'], f"{data['price']}ariary",
+            data['payment_method'], "EN ATTENTE",
+            "NON",    # Rappel Envoyé (Colonne M)
+            ref_code  # Référence Paiement (Colonne N)
         ]
         sheet.append_row(new_row)
 
         payment_label = "Sur place" if data['payment_method'] == "sur_place" else "Mobile Money (Mvola)"
 
-        # 2. Email Client : Style Professionnel
-        subject_c = f"Demande de réservation reçue - Lalilalou Beauty & Spa 🌸"
+        # 2. Email Client : Style Professionnel avec Référence
+        subject_c = f"Demande de réservation {ref_code} - Lalilalou 🌸"
         body_c = f"""Bonjour {data['fullname']},
 
-Nous vous remercions d'avoir choisi Lalilalou Beauty & Spa. 
-
-Votre demande de réservation pour le service "{data['service']}" a bien été enregistrée.
+Nous avons bien enregistré votre demande de réservation sous la référence : {ref_code}
 
 DÉTAILS DE VOTRE RÉSERVATION :
 -------------------------------------------
+✨ Référence : {ref_code}
 📅 Date : {data['date']}
 🕙 Heure : {data['time']}
-👤 Praticien : {data['employee']}
-💰 Tarif : {data['price']}€
-💳 Mode de paiement : {payment_label}
+💰 Tarif : {data['price']}ariary
+💳 Paiement : {payment_label}
 -------------------------------------------
 
 STATUT : EN ATTENTE DE VALIDATION
-Votre réservation n'est pas encore définitive. Notre équipe vérifie actuellement nos disponibilités. Vous recevrez un e-mail de confirmation finale ou un appel de notre part très prochainement.
+Votre réservation sera confirmée après vérification de notre planning.
 
-{"⚠️ RAPPEL MVOLA : Pour garantir votre créneau, merci d'effectuer le transfert au +261 34 64 165 66. Votre demande sera traitée dès réception du dépôt." if data['payment_method'] == 'mvola' else ""}
-
-Merci de votre confiance et à très bientôt pour votre moment de bien-être.
+{"⚠️ INSTRUCTIONS MVOLA : Pour valider votre rendez-vous, merci d'effectuer le transfert au +261 34 64 165 66. IMPORTANT : Indiquez la référence " + ref_code + " dans le motif du transfert." if data['payment_method'] == 'mvola' else ""}
 
 Cordialement,
-
 L'équipe Lalilalou
 Contact : +261 34 64 165 66
 """
         send_gmail_api(data['email'], subject_c, body_c)
 
-        # 3. Email Admin : Détails complets du client
-        subject_a = f"🚨 NOUVELLE DEMANDE : {data['fullname']} ({data['service']})"
-        body_a = f"""Bonjour admin,
+        # 3. Email Admin
+        subject_a = f"🚨 NOUVELLE RÉSA : {ref_code} - {data['fullname']}"
+        body_a = f"""Une nouvelle réservation a été effectuée.
 
-Une nouvelle demande de réservation vient d'être effectuée sur le site.
-
-COORDONNÉES DU CLIENT :
+RÉFÉRENCE : {ref_code}
 -------------------------------------------
-👤 Nom complet : {data['fullname']}
+👤 Client : {data['fullname']}
 📧 Email : {data['email']}
-📞 Téléphone : {data['phone']}
+📞 Tel : {data['phone']}
 
-DÉTAILS DE LA PRESTATION :
--------------------------------------------
-✨ Service : {data['service']} ({data['category']})
-📅 Date : {data['date']}
-🕙 Heure : {data['time']}
-👤 Employé : {data['employee']}
-💰 Prix : {data['price']}€
+DÉTAILS :
+✨ Service : {data['service']}
+📅 Date : {data['date']} à {data['time']}
+💰 Prix : {data['price']}ariary
 💳 Paiement : {payment_label}
-
-ACTION REQUISE :
-Veuillez vérifier le planning et valider ou refuser cette demande dans votre Google Sheet de suivi.
 """
         send_gmail_api(MAIL_USER, subject_a, body_a)
 
-        return jsonify({"status": "success"}), 200
+        return jsonify({"status": "success", "ref": ref_code}), 200
     except Exception as e:
         print(f"Erreur: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
-
+    
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)

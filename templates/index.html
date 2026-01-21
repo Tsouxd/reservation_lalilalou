@@ -26,7 +26,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 700px;
             margin: 0 auto;
             background: #ffffff;
             border-radius: 20px;
@@ -740,13 +740,89 @@
             text-align: center;
             width: 100%;
         }
+
+        .deposit-info h3 { color: #856404; margin-top: 0; }
+        .deposit-info p { color: #856404; font-size: 0.95em; }
+
+        /* --- Ajustement du Header pour plus de compacité --- */
+        .header {
+            background: linear-gradient(135deg, #000000 0%, #434343 100%);
+            color: white;
+            padding: 20px 30px; /* Réduit de 40px à 20px */
+            text-align: center;
+            border-bottom: 3px solid #ff69b4;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- Style du Logo compact --- */
+        .logo-container {
+            text-align: center;
+            line-height: 0; /* Supprime l'espace sous l'image */
+        }
+
+        .logo {
+            max-width: 110px; /* Taille plus discrète et professionnelle */
+            height: auto;
+            /* Optionnel : ajoute un léger éclat derrière le logo */
+            filter: drop-shadow(0 0 8px rgba(255, 105, 180, 0.3)); 
+        }
+
+        .header h1 {
+            font-size: 20px; /* Un peu plus petit pour l'équilibre */
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 13px;
+            margin-bottom: 0; /* Pas de marge en bas du sous-titre */
+        }
+
+        /* --- Style du logo dans le message de succès --- */
+        .success-logo {
+            max-width: 70px;
+            margin-bottom: 10px;
+        }
+
+        .phone-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .country-code {
+            flex: 0 0 160px; /* On augmente à 160px pour que le nom du pays soit lisible */
+            padding: 10px 5px !important;
+            background-color: #f8f9fa !important;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 13px; /* Légèrement plus petit pour que tout rentre */
+            cursor: pointer;
+        }
+
+        #phone {
+            flex: 1;
+        }
+
+        /* Optionnel : Ajustement pour mobile */
+        @media (max-width: 600px) {
+            .country-code {
+                flex: 0 0 120px; /* Plus petit sur mobile pour laisser de la place au numéro */
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            <!-- LOGO COMPACT -->
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='lalilalou-removebg-preview.png') }}" alt="Logo Lalilalou" class="logo">
+            </div>
             <h1>Réservation en ligne</h1>
-            <p>Réservez votre service en quelques clics</p>
         </div>
 
         <div class="progress-bar">
@@ -757,11 +833,15 @@
             </div>
             <div class="step" data-step="2">
                 <div class="step-circle">2</div>
-                <div class="step-label">Créneaux</div>
+                <div class="step-label">Acompte</div>
             </div>
             <div class="step" data-step="3">
                 <div class="step-circle">3</div>
-                <div class="step-label">Paiement</div>
+                <div class="step-label">Créneaux</div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-circle">4</div>
+                <div class="step-label">Confirmation</div>
             </div>
         </div>
 
@@ -774,10 +854,8 @@
                     <label for="category">Catégorie</label>
                     <select id="category" required>
                         <option value="">Sélectionnez une catégorie</option>
-                        <option value="coiffure">Coiffure</option>
-                        <option value="esthetique">Esthétique</option>
-                        <option value="massage">Massage & Spa</option>
-                        <option value="manucure">Manucure & Pédicure</option>
+                        <option value="Cil">Cil</option>
+                        <option value="Sourcil">Sourcil</option>
                     </select>
                 </div>
 
@@ -804,8 +882,28 @@
                 </div>
             </div>
 
-            <!-- Étape 2: Sélection du créneau -->
+            <!-- Étape 2: Condition de Paiement (Acompte) -->
             <div class="form-step" id="step2">
+                <h2>Condition de réservation</h2>
+                
+                <div class="deposit-info">
+                    <h3>⚠️ Paiement d'un acompte</h3>
+                    <p>Pour valider votre réservation, un acompte de <strong>10 000 Ar</strong> est requis.</p>
+                    <p>Cet acompte sera déduit du montant total le jour de votre prestation. En cas d'annulation moins de 24h à l'avance, cet acompte ne sera pas remboursable.</p>
+                </div>
+
+                <div class="form-group">
+                    <p>En cliquant sur "Accepter et continuer", vous reconnaissez avoir pris connaissance de cette condition.</p>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="prevStep()">Retour</button>
+                    <button type="button" class="btn-primary" onclick="nextStep()">Accepter et continuer</button>
+                </div>
+            </div>
+
+            <!-- Étape 3: Sélection du créneau -->
+            <div class="form-step" id="step3">
                 <h2>Choisissez votre créneau</h2>
                 
                 <div class="form-group">
@@ -824,45 +922,45 @@
                 </div>
             </div>
 
-            <!-- Étape 3: Paiement et confirmation -->
-            <div class="form-step" id="step3">
-                <h2>Confirmation et paiement</h2>
+            <!-- Étape 4: Confirmation -->
+            <div class="form-step" id="step4">
+                <h2>Confirmation et détails</h2>
                 
                 <div class="summary">
                     <div class="summary-item">
-                        <span>Service:</span>
+                        <span>Service :</span>
                         <span id="summaryService">-</span>
                     </div>
                     <div class="summary-item">
-                        <span>Date:</span>
+                        <span>Date :</span>
                         <span id="summaryDate">-</span>
                     </div>
                     <div class="summary-item">
-                        <span>Heure:</span>
+                        <span>Heure :</span>
                         <span id="summaryTime">-</span>
                     </div>
                     <div class="summary-item">
-                        <span>Employé:</span>
+                        <span>Employé :</span>
                         <span id="summaryEmployee">-</span>
                     </div>
                     <div class="summary-item">
-                        <span>Total:</span>
-                        <span id="summaryPrice">50€</span>
+                        <span>Total :</span>
+                        <span id="summaryPrice">-</span>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Mode de paiement *</label>
+                    <label>Mode de paiement de l'acompte (10 000 Ar) *</label>
                     <div class="payment-methods">
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="mvola" onchange="toggleMvola(true)"> Mvola
+                        </label>  
                         <label class="payment-option">
                             <input type="radio" name="payment" value="sur_place" checked onchange="toggleMvola(false)"> Payer sur place
                         </label>
-                        <label class="payment-option">
-                            <input type="radio" name="payment" value="mvola" onchange="toggleMvola(true)"> Mvola
-                        </label>
                     </div>
                     <div id="mvolaDetails">
-                        📞 Faire le dépôt au : <strong>+261 34 64 165 66</strong>
+                        📞 Faire le dépôt de 10 000 Ar au : <strong>+261 34 64 165 66</strong> avec la référence envoyée via l'email.
                     </div>
                 </div>
 
@@ -878,12 +976,45 @@
 
                 <div class="form-group">
                     <label for="phone">Numéro de téléphone *</label>
-                    <input type="tel" id="phone" placeholder="+33 6 12 34 56 78" required>
+                    <div class="phone-container">
+                        <select id="countryCode" class="country-code">
+                            <!-- Priorité locale -->
+                            <option value="+261" selected>🇲🇬 +261 (Madagascar)</option>
+                            <option value="+33">🇫🇷 +33 (France)</option>
+                            <option value="+262">🇷🇪 +262 (Réunion / Mayotte)</option>
+                            <option value="+230">🇲🇺 +230 (Maurice)</option>
+                            <option value="+269">🇰🇲 +269 (Comores)</option>
+                            <option value="+248">🇸🇨 +248 (Seychelles)</option>
+                            
+                            <!-- Afrique (Sélection) -->
+                            <option value="+212">🇲🇦 +212 (Maroc)</option>
+                            <option value="+221">🇸🇳 +221 (Sénégal)</option>
+                            <option value="+225">🇨🇮 +225 (Côte d'Ivoire)</option>
+                            <option value="+216">🇹🇳 +216 (Tunisie)</option>
+                            <option value="+213">🇩🇿 +213 (Algérie)</option>
+                            <option value="+27">🇿🇦 +27 (Afrique du Sud)</option>
+
+                            <!-- Europe (Sélection) -->
+                            <option value="+32">🇧🇪 +32 (Belgique)</option>
+                            <option value="+41">🇨🇭 +41 (Suisse)</option>
+                            <option value="+39">🇮🇹 +39 (Italie)</option>
+                            <option value="+49">🇩🇪 +49 (Allemagne)</option>
+                            <option value="+34">🇪🇸 +34 (Espagne)</option>
+                            <option value="+44">🇬🇧 +44 (Royaume-Uni)</option>
+
+                            <!-- Autres -->
+                            <option value="+1">🇺🇸 +1 (USA / Canada)</option>
+                            <option value="+86">🇨🇳 +86 (Chine)</option>
+                            <option value="+971">🇦🇪 +971 (Émirats Arables Unis)</option>
+                            <option value="+90">🇹🇷 +90 (Turquie)</option>
+                        </select>
+                        <input type="tel" id="phone" placeholder="3x xx xxx xx" required>
+                    </div>
                 </div>
 
                 <div class="btn-group">
                     <button type="button" class="btn-secondary" onclick="prevStep()">Retour</button>
-                    <button type="button" class="btn-primary" onclick="submitBooking()">Confirmer et payer</button>
+                    <button type="button" class="btn-primary" onclick="submitBooking()">Confirmer la demande</button>
                 </div>
             </div>
 
@@ -894,7 +1025,7 @@
                 <p>
                     Votre demande de réservation a été enregistrée. 
                     Un e-mail récapitulatif a été envoyé à <strong id="confirmEmail"></strong>. 
-                    <br><strong>Veuillez attendre la validation de notre équipe.</strong>
+                    <br><strong>Veuillez attendre la validation après réception de votre acompte.</strong>
                 </p>
                 <button type="button" class="btn-primary" onclick="resetForm()">Retour à l'accueil</button>
             </div>
@@ -903,45 +1034,34 @@
 
     <script>
         let currentStep = 1;
+        const totalSteps = 4;
         let bookingData = {};
 
         const services = {
-            coiffure: [
-                { name: 'Coupe femme', price: 45 },
-                { name: 'Coupe homme', price: 30 },
-                { name: 'Coloration', price: 75 },
-                { name: 'Brushing', price: 35 }
+            Cil: [
+                { name: 'REHAUSSEMENT DE CIL 45min', price: 30000 },
+                { name: 'REHAUSSEMENT DE CIL + TEINTURE 1h', price: 35000 },
+                { name: 'EXTENSION CIL à CIL 2h', price: 45000 },
+                { name: 'EXTENSION HYBRIDE 2h', price: 50000 },
+                { name: 'EXTENSION VOLUME RUSSE 2h', price: 55000 },
+                { name: 'DEPOSE EXTENSION 15min', price: 10000 }
             ],
-            esthetique: [
-                { name: 'Soin du visage', price: 60 },
-                { name: 'Épilation', price: 40 },
-                { name: 'Maquillage', price: 50 }
-            ],
-            massage: [
-                { name: 'Massage relaxant 60min', price: 80 },
-                { name: 'Massage sportif 45min', price: 65 },
-                { name: 'Massage dos 30min', price: 45 }
-            ],
-            manucure: [
-                { name: 'Manucure classique', price: 35 },
-                { name: 'Pose vernis semi-permanent', price: 45 },
-                { name: 'Pédicure', price: 40 }
+            Sourcil: [
+                { name: 'SOURCIL + TEINTURE 30min', price: 25000 }
             ]
         };
 
         const timeSlots = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 
-        // Changement de catégorie -> met à jour les services
         document.getElementById('category').addEventListener('change', function() {
             const category = this.value;
             const serviceSelect = document.getElementById('service');
             serviceSelect.innerHTML = '<option value="">Sélectionnez un service</option>';
-            
             if (category && services[category]) {
                 services[category].forEach((service, index) => {
                     const option = document.createElement('option');
                     option.value = index;
-                    option.textContent = `${service.name} - ${service.price}€`;
+                    option.textContent = `${service.name} - ${service.price} Ar`;
                     option.dataset.price = service.price;
                     option.dataset.name = service.name;
                     serviceSelect.appendChild(option);
@@ -949,35 +1069,22 @@
             }
         });
 
-        // Sélection de date -> Charge les créneaux réels
         document.getElementById('date').addEventListener('change', generateTimeSlots);
 
         async function generateTimeSlots() {
             const dateInput = document.getElementById('date').value;
             const container = document.getElementById('timeSlots');
-            
             if (!dateInput) return;
-
-            // Affiche le message de chargement immédiatement
             container.innerHTML = '<div class="loading-text">Recherche des disponibilités...</div>';
-
             try {
-                // Requête au backend Flask
                 const response = await fetch(`/api/get-slots?date=${dateInput}`);
-                if (!response.ok) throw new Error('Erreur serveur');
-                
                 const bookedTimes = await response.json();
-
-                // Vide le conteneur pour mettre les vrais créneaux
                 container.innerHTML = '';
-                
                 timeSlots.forEach(time => {
                     const slot = document.createElement('div');
                     const isBooked = bookedTimes.includes(time);
-                    
                     slot.className = isBooked ? 'time-slot booked' : 'time-slot';
                     slot.textContent = time;
-                    
                     if (!isBooked) {
                         slot.onclick = function() {
                             document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
@@ -987,22 +1094,15 @@
                     }
                     container.appendChild(slot);
                 });
-
-                if (timeSlots.length === 0) {
-                    container.innerHTML = '<p>Aucun créneau disponible.</p>';
-                }
-
             } catch (error) {
-                console.error("Erreur:", error);
-                container.innerHTML = '<p style="color:red; font-size:12px;">Impossible de charger les horaires. Vérifiez votre connexion.</p>';
+                container.innerHTML = '<p>Erreur lors du chargement.</p>';
             }
         }
 
         function updateProgressBar() {
             const steps = document.querySelectorAll('.step');
             const progressLine = document.getElementById('progressLine');
-            const width = ((currentStep - 1) / (steps.length - 1)) * 100;
-            
+            const width = ((currentStep - 1) / (totalSteps - 1)) * 100;
             steps.forEach((step, index) => {
                 if (index + 1 < currentStep) {
                     step.classList.add('completed');
@@ -1030,12 +1130,9 @@
                 bookingData.service = sel.dataset.name;
                 bookingData.price = sel.dataset.price;
                 bookingData.employee = document.getElementById('employee').options[document.getElementById('employee').selectedIndex].text;
-                
-                // Bloque les dates passées
                 document.getElementById('date').min = new Date().toISOString().split('T')[0];
             }
-            
-            if (currentStep === 2) {
+            if (currentStep === 3) {
                 if (!document.getElementById('date').value || !bookingData.time) {
                     alert('Veuillez choisir une date et une heure');
                     return;
@@ -1043,8 +1140,7 @@
                 bookingData.date = document.getElementById('date').value;
                 updateSummary();
             }
-            
-            if (currentStep < 3) {
+            if (currentStep < totalSteps) {
                 document.getElementById(`step${currentStep}`).classList.remove('active');
                 currentStep++;
                 document.getElementById(`step${currentStep}`).classList.add('active');
@@ -1066,7 +1162,7 @@
             document.getElementById('summaryDate').textContent = bookingData.date;
             document.getElementById('summaryTime').textContent = bookingData.time;
             document.getElementById('summaryEmployee').textContent = bookingData.employee;
-            document.getElementById('summaryPrice').textContent = bookingData.price + '€';
+            document.getElementById('summaryPrice').textContent = bookingData.price + ' Ar';
         }
 
         function toggleMvola(show) {
@@ -1074,50 +1170,76 @@
         }
 
         function submitBooking() {
+            // Récupération des éléments
             const fullname = document.getElementById('fullname').value;
             const email = document.getElementById('email').value;
-            const phone = document.getElementById('phone').value;
-            const payment = document.querySelector('input[name="payment"]:checked').value;
-            
-            if (!fullname || !email || !phone) {
-                alert('Veuillez remplir vos coordonnées');
+            const phoneNum = document.getElementById('phone').value; // Le numéro tapé
+            const countryCode = document.getElementById('countryCode').value; // L'indicatif choisi
+            const paymentElement = document.querySelector('input[name="payment"]:checked');
+            const payment = paymentElement ? paymentElement.value : "sur_place";
+
+            // Validation
+            if (!fullname || !email || !phoneNum) {
+                alert('Veuillez remplir vos coordonnées (Nom, Email et Téléphone)');
                 return;
             }
-            
+
+            // Préparation des données pour l'envoi
             bookingData.fullname = fullname;
             bookingData.email = email;
-            bookingData.phone = phone;
+            // On fusionne l'indicatif et le numéro pour le Sheet et les emails
+            bookingData.phone = countryCode + " " + phoneNum; 
             bookingData.payment_method = payment;
 
-            const btn = document.querySelector('#step3 .btn-primary');
-            const originalText = btn.textContent;
+            // Gestion de l'interface (Bouton)
+            const btn = document.querySelector('#step4 .btn-primary');
+            const originalText = "Confirmer la demande";
             btn.textContent = "Envoi en cours...";
             btn.disabled = true;
 
+            // Appel API
             fetch('/api/book', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(bookingData)
             })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error("Erreur serveur");
+                return res.json();
+            })
             .then(data => {
                 if (data.status === "success") {
-                    document.getElementById('step3').classList.remove('active');
+                    // Mise à jour du message de succès
+                    document.getElementById('step4').classList.remove('active');
                     document.getElementById('confirmEmail').textContent = email;
+                    
+                    // Si vous avez les spans pour le nom et le service dans le message de succès
+                    if(document.getElementById('displayClientName')) {
+                        document.getElementById('displayClientName').textContent = bookingData.fullname;
+                    }
+                    if(document.getElementById('displayServiceName')) {
+                        document.getElementById('displayServiceName').textContent = bookingData.service;
+                    }
+
                     document.getElementById('successMessage').classList.add('active');
                 } else {
-                    alert("Erreur: " + data.message);
+                    alert("Erreur : " + data.message);
+                    btn.textContent = originalText;
+                    btn.disabled = false;
                 }
             })
-            .catch(err => alert("Erreur de connexion au serveur"))
-            .finally(() => {
+            .catch(err => {
+                console.error(err);
+                alert("Une erreur de connexion est survenue. Veuillez réessayer.");
                 btn.textContent = originalText;
                 btn.disabled = false;
             });
         }
 
         function resetForm() {
-            location.reload(); // La méthode la plus propre pour tout remettre à zéro
+            location.reload();
         }
 
         updateProgressBar();

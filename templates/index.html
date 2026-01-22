@@ -672,34 +672,465 @@
             }
         }
 
-        @media (max-width: 600px) {
-            .time-slots {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .progress-bar {
-                padding: 20px 30px;
-            }
-            
-            .progress-bar::before {
-                left: 30px;
-                right: 30px;
-            }
-            
-            .progress-line {
-                left: 30px;
+        /* =============================================
+           RESPONSIVE DESIGN - TABLETTE & MOBILE
+           ============================================= */
+
+        /* Tablettes (768px - 1024px) */
+        @media (max-width: 1024px) {
+            .container {
+                max-width: 90%;
+                margin: 20px auto;
             }
 
             .form-content {
-                padding: 30px 20px;
+                padding: 40px 30px;
+            }
+
+            .time-slots {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+        }
+
+        /* Petites tablettes et grands mobiles (600px - 768px) */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                border-radius: 15px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            }
+
+            .header {
+                padding: 25px 20px;
             }
 
             .header h1 {
-                font-size: 24px;
+                font-size: 22px;
+                letter-spacing: 1px;
+                margin-top: 10px;
+            }
+
+            .header p {
+                font-size: 12px;
+            }
+
+            .logo {
+                max-width: 90px;
+            }
+
+            .progress-bar {
+                padding: 25px 20px;
+                overflow-x: auto;
+            }
+
+            .progress-bar::before {
+                left: 20px;
+                right: 20px;
+            }
+
+            .progress-line {
+                left: 20px;
+            }
+
+            .step-circle {
+                width: 40px;
+                height: 40px;
+                font-size: 14px;
+            }
+
+            .step-label {
+                font-size: 11px;
+                letter-spacing: 0.5px;
+            }
+
+            .form-content {
+                padding: 35px 25px;
+            }
+
+            .form-step h2 {
+                font-size: 20px;
+                margin-bottom: 25px;
+                letter-spacing: 1px;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            label {
+                font-size: 12px;
+                margin-bottom: 8px;
+            }
+
+            select, input {
+                padding: 13px 15px;
+                font-size: 14px;
+            }
+
+            .time-slots {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .time-slot {
+                padding: 12px 8px;
+                font-size: 13px;
+            }
+
+            .payment-methods {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .payment-option {
+                padding: 12px;
+            }
+
+            .summary {
+                padding: 20px;
+                margin-bottom: 25px;
+            }
+
+            .summary-item {
+                font-size: 13px;
+                padding: 10px 0;
+            }
+
+            .summary-item:last-child {
+                font-size: 18px;
+            }
+
+            button {
+                padding: 14px 25px;
+                font-size: 13px;
+                letter-spacing: 1.5px;
+            }
+
+            .btn-group {
+                margin-top: 30px;
+                gap: 12px;
+            }
+
+            .success-icon {
+                width: 70px;
+                height: 70px;
+                font-size: 35px;
+                margin-bottom: 20px;
+            }
+
+            .success-message h2 {
+                font-size: 22px;
+                letter-spacing: 1px;
+            }
+
+            .success-message p {
+                font-size: 14px;
+                line-height: 1.6;
+            }
+
+            .deposit-info h3 {
+                font-size: 16px;
+            }
+
+            .deposit-info p {
+                font-size: 13px;
+            }
+        }
+
+        /* Mobiles (320px - 600px) */
+        @media (max-width: 600px) {
+            body {
+                padding: 5px;
+            }
+
+            .container {
+                border-radius: 12px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+            }
+
+            .header {
+                padding: 20px 15px;
+            }
+
+            .header h1 {
+                font-size: 18px;
+                letter-spacing: 1px;
+                margin-top: 8px;
+            }
+
+            .header p {
+                font-size: 11px;
+            }
+
+            .logo {
+                max-width: 75px;
+            }
+
+            .progress-bar {
+                padding: 20px 15px;
+                position: relative;
+            }
+
+            .progress-bar::before {
+                left: 15px;
+                right: 15px;
+            }
+
+            .progress-line {
+                left: 15px;
+            }
+
+            .step {
+                flex: 1;
+                min-width: 60px;
+            }
+
+            .step-circle {
+                width: 35px;
+                height: 35px;
+                font-size: 13px;
+                margin-bottom: 6px;
+            }
+
+            .step.active .step-circle {
+                transform: scale(1.15);
+            }
+
+            .step-label {
+                font-size: 10px;
+                letter-spacing: 0.3px;
+            }
+
+            .form-content {
+                padding: 25px 20px;
+            }
+
+            .form-step h2 {
+                font-size: 18px;
+                margin-bottom: 20px;
+                letter-spacing: 0.5px;
+            }
+
+            .form-group {
+                margin-bottom: 18px;
+            }
+
+            label {
+                font-size: 11px;
+                margin-bottom: 7px;
+            }
+
+            select, input {
+                padding: 12px 14px;
+                font-size: 14px;
+                border-radius: 6px;
+            }
+
+            .time-slots {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .time-slot {
+                padding: 12px 6px;
+                font-size: 13px;
+                border-radius: 6px;
+            }
+
+            .time-slot.booked::after {
+                font-size: 8px;
+            }
+
+            .payment-methods {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .payment-option {
+                padding: 12px;
+                font-size: 13px;
+            }
+
+            #mvolaDetails {
+                padding: 12px;
+                font-size: 12px;
+                margin-top: 10px;
+            }
+
+            .summary {
+                padding: 18px;
+                margin-bottom: 20px;
+                border-radius: 10px;
+            }
+
+            .summary-item {
+                font-size: 12px;
+                padding: 8px 0;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+
+            .summary-item span:first-child {
+                font-weight: 600;
+                color: #666;
+            }
+
+            .summary-item:last-child {
+                font-size: 20px;
+                margin-top: 8px;
+                flex-direction: row;
+                justify-content: space-between;
+            }
+
+            button {
+                padding: 13px 20px;
+                font-size: 12px;
+                letter-spacing: 1px;
+                border-radius: 40px;
             }
 
             .btn-group {
                 flex-direction: column;
+                margin-top: 25px;
+                gap: 10px;
+            }
+
+            .btn-group button {
+                width: 100%;
+            }
+
+            .success-message {
+                padding: 30px 20px;
+            }
+
+            .success-icon {
+                width: 65px;
+                height: 65px;
+                font-size: 32px;
+                margin-bottom: 15px;
+            }
+
+            .success-message h2 {
+                font-size: 20px;
+                margin-bottom: 15px;
+                letter-spacing: 0.5px;
+            }
+
+            .success-message p {
+                font-size: 13px;
+                line-height: 1.6;
+                margin-bottom: 25px;
+            }
+
+            .success-logo {
+                max-width: 60px;
+            }
+
+            .deposit-info h3 {
+                font-size: 15px;
+                margin-bottom: 8px;
+            }
+
+            .deposit-info p {
+                font-size: 12px;
+                line-height: 1.5;
+            }
+
+            /* Optimisation du sélecteur de pays sur mobile */
+            .phone-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .country-code {
+                flex: 1;
+                width: 100%;
+            }
+
+            #phone {
+                flex: 1;
+                width: 100%;
+            }
+        }
+
+        /* Très petits mobiles (320px - 375px) */
+        @media (max-width: 375px) {
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .step-circle {
+                width: 32px;
+                height: 32px;
+                font-size: 12px;
+            }
+
+            .step-label {
+                font-size: 9px;
+            }
+
+            .form-step h2 {
+                font-size: 16px;
+            }
+
+            .time-slots {
+                gap: 6px;
+            }
+
+            .time-slot {
+                padding: 10px 4px;
+                font-size: 12px;
+            }
+
+            button {
+                padding: 12px 18px;
+                font-size: 11px;
+            }
+
+            .summary-item:last-child {
+                font-size: 18px;
+            }
+        }
+
+        /* Landscape mobile */
+        @media (max-width: 900px) and (orientation: landscape) {
+            .header {
+                padding: 15px 20px;
+            }
+
+            .header h1 {
+                font-size: 16px;
+                margin-top: 5px;
+            }
+
+            .logo {
+                max-width: 60px;
+            }
+
+            .progress-bar {
+                padding: 15px 20px;
+            }
+
+            .form-content {
+                padding: 20px;
+            }
+
+            .form-step h2 {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+
+            .time-slots {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .btn-group {
+                flex-direction: row;
             }
         }
 

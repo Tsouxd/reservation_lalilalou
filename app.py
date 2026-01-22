@@ -13,8 +13,6 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from oauth2client.service_account import ServiceAccountCredentials
 from dotenv import load_dotenv
-
-# Planificateur de tâches
 from apscheduler.schedulers.background import BackgroundScheduler
 
 load_dotenv()
@@ -27,13 +25,8 @@ GMAIL_REFRESH_TOKEN = os.environ.get('GMAIL_REFRESH_TOKEN')
 MAIL_USER = os.environ.get('MAIL_USER', 'tsourakotoson0@gmail.com')
 
 def get_gmail_service():
-    creds = Credentials(
-        None,
-        refresh_token=GMAIL_REFRESH_TOKEN,
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=GMAIL_CLIENT_ID,
-        client_secret=GMAIL_CLIENT_SECRET,
-    )
+    creds = Credentials(None, refresh_token=GMAIL_REFRESH_TOKEN, token_uri="https://oauth2.googleapis.com/token",
+                        client_id=GMAIL_CLIENT_ID, client_secret=GMAIL_CLIENT_SECRET)
     if creds.expired:
         creds.refresh(Request())
     return build('gmail', 'v1', credentials=creds)
@@ -80,60 +73,40 @@ def get_balance(total_prix_str):
 
 # --- LOGIQUE D'ARCHIVAGE AUTOMATIQUE ---
 def archive_old_records():
-    print(f"[{datetime.now()}] DÉBUT DE L'ARCHIVAGE...")
+    print(f"[{datetime.now()}] Debut de l'archivage...")
     try:
         sheet_main = get_google_sheet()
         sheet_archive = get_google_sheet("Archives")
-        
         all_rows = sheet_main.get_all_values()
         limite_date = datetime.now() - timedelta(days=30)
-        
         rows_to_move = []
         indices_to_delete = []
 
-        # 1. Identifier les lignes
         for i, row in enumerate(all_rows):
-            if i == 0: continue # Sauter l'entête
-            
+            if i == 0: continue
             if len(row) > 7 and row[7]:
                 try:
-                    # Conversion de la date YYYY-MM-DD
                     date_rdv = datetime.strptime(row[7].strip(), "%Y-%m-%d")
-                    
                     if date_rdv < limite_date:
                         rows_to_move.append(row)
                         indices_to_delete.append(i + 1)
                 except Exception:
                     continue
 
-        if not rows_to_move:
-            print("Aucune donnée ancienne à archiver.")
-            return "Rien à archiver"
-
-        # 2. Copier vers l'onglet Archives
-        print(f"Copie de {len(rows_to_move)} lignes vers Archives...")
-        sheet_archive.append_rows(rows_to_move)
-
-        # 3. Supprimer du sheet principal
-        # On trie à l'envers pour ne pas décaler les index
-        indices_to_delete.sort(reverse=True)
-        
-        print(f"Suppression de {len(indices_to_delete)} lignes du sheet principal...")
-        for idx in indices_to_delete:
-            # CORRECTION ICI : on utilise delete_rows(index)
-            sheet_main.delete_rows(idx)
-            print(f"Ligne {idx} supprimée.")
-
-        print("--- ARCHIVAGE TERMINÉ AVEC SUCCÈS ---")
-        return f"{len(rows_to_move)} lignes déplacées et supprimées"
-
+        if rows_to_move:
+            sheet_archive.append_rows(rows_to_move)
+            indices_to_delete.sort(reverse=True)
+            for idx in indices_to_delete:
+                sheet_main.delete_rows(idx)
+            print(f"Succes : {len(rows_to_move)} lignes archivees.")
+        return f"{len(rows_to_move)} lignes deplacees"
     except Exception as e:
-        print(f"ERREUR CRITIQUE ARCHIVAGE: {e}")
-        return f"Erreur: {str(e)}"
+        print(f"Erreur archivage : {e}")
+        return str(e)
     
 # --- LOGIQUE DE TRAITEMENT AUTOMATIQUE (Confirmations & Rappels) ---
 def trigger_auto_tasks():
-    print(f"[{datetime.now()}] Scan du planning pour rappels et confirmations...")
+    print(f"[{datetime.now()}] Analyse du planning...")
     try:
         sheet = get_google_sheet()
         all_rows = sheet.get_all_values()
@@ -154,29 +127,30 @@ def trigger_auto_tasks():
 
                 # --- 1. EMAIL DE CONFIRMATION (Acompte bien reçu) ---
                 if statut == "CONFIRMÉ" and confirm_faite != "OUI":
-                    subject_c = f"Réservation Confirmée ✅ - Réf: {ref_code}"
+                    subject_c = f"Confirmation de reservation : Reference {ref_code}"
                     body_c = f"""Bonjour {client_nom},
 
-Nous avons le plaisir de vous informer que votre acompte de 10 000 ariary a bien été reçu. Votre réservation chez Lalilalou Beauty & Spa est désormais officiellement CONFIRMÉE.
+Nous vous confirmons la bonne reception de votre acompte de 10 000 ariary. Votre reservation chez Lalilalou est desormais validee.
 
-RÉCAPITULATIF DE VOTRE SÉANCE :
+Details de la prestation :
 -------------------------------------------
-✨ Référence : {ref_code}
-💆 Prestation : {service_nom}
-📅 Date : {date_rdv}
-🕙 Heure : {heure_rdv}
--------------------------------------------
-
-DÉTAILS FINANCIERS :
-💰 Montant total : {total_prix}
-✅ Acompte versé : 10 000 ariary
-💵 Solde à régler sur place : {solde}
+Reference : {ref_code}
+Service : {service_nom}
+Date : {date_rdv}
+Heure : {heure_rdv}
 -------------------------------------------
 
-Nous avons hâte de vous accueillir pour ce moment privilégié de soin.
+Information financiere :
+- Montant total : {total_prix}
+- Acompte recu : 10 000 ariary
+- Solde a regler sur place : {solde}
+-------------------------------------------
+
+Nous vous remercions de votre confiance et restons a votre disposition pour toute information complementaire.
 
 Cordialement,
-L'équipe Lalilalou Beauty & Spa
+La Direction
+Lalilalou
 Contact : +261 34 64 165 66"""
                     
                     if send_gmail_api(client_email, subject_c, body_c):
@@ -184,48 +158,42 @@ Contact : +261 34 64 165 66"""
 
                 # --- 2. EMAIL DE RAPPEL J-1 ---
                 if statut == "CONFIRMÉ" and date_rdv == demain_str and rappel_fait != "OUI":
-                    subject_r = f"Rappel : Votre rendez-vous de DEMAIN chez Lalilalou 🌸"
+                    subject_r = f"Notification de rappel : Votre rendez-vous du {date_rdv}"
                     body_r = f"""Bonjour {client_nom},
 
-C'est un petit message pour vous rappeler votre rendez-vous de DEMAIN chez Lalilalou Beauty & Spa. Nous préparons tout pour votre accueil !
+Ceci est un message automatique pour vous rappeler votre rendez-vous prevu demain au sein de notre établissement Lalilalou.
 
-VOTRE RENDEZ-VOUS :
+Recapitulatif logistique :
 -------------------------------------------
-📅 Date : {date_rdv} (DEMAIN)
-🕙 Heure : {heure_rdv}
-✨ Service : {service_nom}
+Date : {date_rdv}
+Heure : {heure_rdv}
+Service : {service_nom}
 -------------------------------------------
-💵 Solde à prévoir sur place : {solde}
+Solde a regler sur place : {solde}
 -------------------------------------------
 
-En cas d'empêchement, merci de nous contacter au +261 34 64 165 66 le plus tôt possible.
+En cas d'empechement, nous vous prions de bien vouloir nous en informer dans les plus brefs delais au +261 34 64 165 66.
 
-À demain pour votre moment d'exception !
+Dans l'attente de vous recevoir.
 
-L'équipe Lalilalou"""
+Cordialement,
+Le Service Clientele
+Lalilalou"""
                     
                     if send_gmail_api(client_email, subject_r, body_r):
                         sheet.update_cell(i + 1, 13, "OUI")
 
     except Exception as e:
-        print(f"ERREUR Scheduler Tâches: {e}")
+        print(f"Erreur Scheduler : {e}")
 
 # --- INITIALISATION DU PLANIFICATEUR ---
-# On ajoute coalesce et max_instances pour éviter les crashs si Google est lent
 job_defaults = {
     'coalesce': True,
     'max_instances': 1
 }
 scheduler = BackgroundScheduler(daemon=True, job_defaults=job_defaults)
-
-# Scan des emails toutes les 2 minutes (sécurisé pour l'API Google)
 scheduler.add_job(func=trigger_auto_tasks, trigger="interval", minutes=15)
-# Archivage tous les jours à 3h du matin
 scheduler.add_job(func=archive_old_records, trigger="cron", hour=3, minute=0)
-
-# Tâche 2 : Archivage automatique (CHANGÉ : toutes les 2 minutes)
-# scheduler.add_job(func=archive_old_records, trigger="interval", minutes=2)
-
 scheduler.start()
 
 # --- ROUTES ---
@@ -261,51 +229,66 @@ def book():
         ]
         sheet.append_row(new_row)
 
-        subject_c = f"Demande de réservation {ref_code} - Lalilalou Beauty & Spa 🌸"
+        # EMAIL ACCUSÉ DE RÉCEPTION (Demande d'acompte)
+        subject_c = f"Accuse de reception : Demande de reservation {ref_code}"
         body_c = f"""Bonjour {data['fullname']},
 
-Nous avons bien reçu votre demande de réservation et nous vous remercions de votre confiance.
+Nous accusons reception de votre demande de reservation effectuee sur notre site internet.
 
-⚠️ POUR VALIDER DÉFINITIVEMENT VOTRE CRÉNEAU :
-Un acompte de 10 000 ariary est nécessaire.
+Afin de valider votre creneau horaire, le reglement d'un acompte est requis.
 
-DÉTAILS FINANCIERS :
+Synthese de la demande :
 -------------------------------------------
-✨ Référence : {ref_code}
-💆 Service : {data['service']}
-📅 Date : {data['date']}
-🕙 Heure : {data['time']}
+Reference : {ref_code}
+Service : {data['service']}
+Date souhaitee : {data['date']}
+Heure souhaitee : {data['time']}
 -------------------------------------------
-💰 Tarif total : {total_prix}
-💳 ACOMPTE À RÉGLER (Mvola) : 10 000 ariary
-💵 Solde restant (le jour J) : {solde}
+Tarif total : {total_prix}
+Acompte a regler : 10 000 ariary
+Solde restant (le jour du rendez-vous) : {solde}
 -------------------------------------------
 
-MODALITÉS DE PAIEMENT :
-Merci d'effectuer le transfert de 10 000 ariary au +261 34 64 165 66.
-⚠️ IMPORTANT : Veuillez indiquer la référence "{ref_code}" dans le motif du transfert.
+Instructions de paiement :
+Le transfert de l'acompte doit etre effectue via Mvola au numero suivant : +261 34 64 165 66.
+Veuillez preciser la reference "{ref_code}" dans le motif du transfert.
 
-Votre réservation sera confirmée par e-mail dès réception de votre dépôt.
+Votre dossier sera traite et confirme des reception de ce depot.
 
 Cordialement,
-L'équipe Lalilalou Beauty & Spa
-Contact : +261 34 64 165 66"""
+Le Service Clientele
+Lalilalou"""
         
         send_gmail_api(data['email'], subject_c, body_c)
-        send_gmail_api(MAIL_USER, f"🚨 NOUVELLE RÉSA : {ref_code} - {data['fullname']}", f"Demande de {data['fullname']} pour {data['service']}")
+
+        # Notification Admin
+        admin_subject = f"Notification : Nouvelle demande de reservation - {ref_code}"
+        admin_body = f"""Information relative a une nouvelle demande de reservation :
+
+Identite du client :
+- Nom complet : {data['fullname']}
+- Telephone : {data['phone']}
+- Email : {data['email']}
+
+Details de la prestation :
+- Service : {data['service']}
+- Date : {data['date']} a {data['time']}
+- Reference de dossier : {ref_code}
+
+Statut actuel : En attente de depot."""
+        send_gmail_api(MAIL_USER, admin_subject, admin_body)
 
         return jsonify({"status": "success", "ref": ref_code}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# --- ROUTE DE TEST TEMPORAIRE POUR L'ARCHIVAGE ---
 @app.route('/force-archive')
 def force_archive():
     try:
         archive_old_records()
-        return "Opération d'archivage lancée ! Vérifiez vos logs et votre onglet Archives."
+        return "Operation d'archivage effectuee."
     except Exception as e:
-        return f"Erreur lors de l'archivage : {str(e)}"
+        return f"Erreur : {str(e)}"
     
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

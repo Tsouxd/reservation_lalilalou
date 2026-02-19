@@ -1,7 +1,9 @@
 # Secrets
 credentials.json
+client_secret_gmail.json
 
 # Environnements virtuels
 venv/
 .env
 generer_token.py
+get_token.py

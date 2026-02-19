@@ -3,14 +3,13 @@ import json
 import base64
 import string
 import random
+import smtplib # Ajouté pour le remplacement
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
+from email.header import Header # Ajouté pour le formatage
 from flask import Flask, render_template, request, jsonify
 
 import gspread
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
 from oauth2client.service_account import ServiceAccountCredentials
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -18,33 +17,29 @@ from apscheduler.schedulers.background import BackgroundScheduler
 load_dotenv()
 app = Flask(__name__)
 
-# --- CONFIGURATION GMAIL API ---
-GMAIL_CLIENT_ID = os.environ.get('GMAIL_CLIENT_ID')
-GMAIL_CLIENT_SECRET = os.environ.get('GMAIL_CLIENT_SECRET')
-GMAIL_REFRESH_TOKEN = os.environ.get('GMAIL_REFRESH_TOKEN')
-MAIL_USER = os.environ.get('MAIL_USER', 'tsourakotoson0@gmail.com')
-
-def get_gmail_service():
-    creds = Credentials(None, refresh_token=GMAIL_REFRESH_TOKEN, token_uri="https://oauth2.googleapis.com/token",
-                        client_id=GMAIL_CLIENT_ID, client_secret=GMAIL_CLIENT_SECRET)
-    if creds.expired:
-        creds.refresh(Request())
-    return build('gmail', 'v1', credentials=creds)
+# --- CONFIGURATION EMAIL (ADAPTÉE) ---
+MAIL_USER = os.environ.get('MAIL_USER', 'lalilalou.contact@gmail.com')
+MAIL_PASS = os.environ.get('MAIL_PASS') # Utilise votre code yzpbcwswvbngxdcy
 
 def send_gmail_api(to, subject, body):
+    """Remplace l'ancienne fonction API par l'envoi SMTP direct avec votre MAIL_PASS"""
     try:
-        service = get_gmail_service()
-        message = MIMEText(body)
-        message['to'] = to
-        message['subject'] = subject
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        service.users().messages().send(userId="me", body={'raw': raw}).execute()
+        msg = MIMEText(body, 'plain', 'utf-8')
+        msg['Subject'] = Header(subject, 'utf-8')
+        msg['From'] = f"Lalilalou <{MAIL_USER}>"
+        msg['To'] = to
+
+        # Connexion au serveur SMTP de Gmail
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(MAIL_USER, MAIL_PASS)
+        server.sendmail(MAIL_USER, [to], msg.as_string())
+        server.quit()
         return True
     except Exception as e:
-        print(f"Erreur API Gmail: {e}")
+        print(f"Erreur envoi email: {e}")
         return False
 
-# --- CONFIGURATION GOOGLE SHEETS ---
+# --- CONFIGURATION GOOGLE SHEETS (CONSERVÉE) ---
 def get_google_sheet(worksheet_name=None):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds_json = os.environ.get("GOOGLE_CREDS")
@@ -63,7 +58,7 @@ def get_google_sheet(worksheet_name=None):
         return spreadsheet.worksheet(worksheet_name)
     return spreadsheet.sheet1
 
-# --- FONCTION UTILITAIRE : CALCUL DU RESTE À PAYER ---
+# --- FONCTION UTILITAIRE : CALCUL DU RESTE À PAYER (CONSERVÉE) ---
 def get_balance(total_prix_str):
     try:
         total = int(''.join(filter(str.isdigit, total_prix_str)))
@@ -71,7 +66,7 @@ def get_balance(total_prix_str):
     except:
         return "à calculer"
 
-# --- LOGIQUE D'ARCHIVAGE AUTOMATIQUE ---
+# --- LOGIQUE D'ARCHIVAGE AUTOMATIQUE (CONSERVÉE) ---
 def archive_old_records():
     print(f"[{datetime.now()}] Debut de l'archivage...")
     try:
@@ -104,7 +99,7 @@ def archive_old_records():
         print(f"Erreur archivage : {e}")
         return str(e)
     
-# --- LOGIQUE DE TRAITEMENT AUTOMATIQUE (Confirmations & Rappels) ---
+# --- LOGIQUE DE TRAITEMENT AUTOMATIQUE (CONSERVÉE) ---
 def trigger_auto_tasks():
     print(f"[{datetime.now()}] Analyse du planning...")
     try:
@@ -125,7 +120,6 @@ def trigger_auto_tasks():
 
                 solde = get_balance(total_prix)
 
-                # --- 1. EMAIL DE CONFIRMATION (Acompte bien reçu) ---
                 if statut == "CONFIRMÉ" and confirm_faite != "OUI":
                     subject_c = f"Confirmation de reservation : Reference {ref_code}"
                     body_c = f"""Bonjour {client_nom},
@@ -156,7 +150,6 @@ Contact : +261 34 64 165 66"""
                     if send_gmail_api(client_email, subject_c, body_c):
                         sheet.update_cell(i + 1, 15, "OUI")
 
-                # --- 2. EMAIL DE RAPPEL J-1 ---
                 if statut == "CONFIRMÉ" and date_rdv == demain_str and rappel_fait != "OUI":
                     subject_r = f"Notification de rappel : Votre rendez-vous du {date_rdv}"
                     body_r = f"""Bonjour {client_nom},
@@ -186,17 +179,14 @@ Lalilalou"""
     except Exception as e:
         print(f"Erreur Scheduler : {e}")
 
-# --- INITIALISATION DU PLANIFICATEUR ---
-job_defaults = {
-    'coalesce': True,
-    'max_instances': 1
-}
+# --- INITIALISATION DU PLANIFICATEUR (CONSERVÉE) ---
+job_defaults = {'coalesce': True, 'max_instances': 1}
 scheduler = BackgroundScheduler(daemon=True, job_defaults=job_defaults)
 scheduler.add_job(func=trigger_auto_tasks, trigger="interval", minutes=15)
 scheduler.add_job(func=archive_old_records, trigger="cron", hour=3, minute=0)
 scheduler.start()
 
-# --- ROUTES ---
+# --- ROUTES (CONSERVÉES) ---
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -229,7 +219,6 @@ def book():
         ]
         sheet.append_row(new_row)
 
-        # EMAIL ACCUSÉ DE RÉCEPTION (Demande d'acompte)
         subject_c = f"Accuse de reception : Demande de reservation {ref_code}"
         body_c = f"""Bonjour {data['fullname']},
 
@@ -261,7 +250,6 @@ Lalilalou"""
         
         send_gmail_api(data['email'], subject_c, body_c)
 
-        # Notification Admin
         admin_subject = f"Notification : Nouvelle demande de reservation - {ref_code}"
         admin_body = f"""Information relative a une nouvelle demande de reservation :
 
